@@ -1,0 +1,541 @@
+import SwiftUI
+
+@main
+struct CosmicRootsApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+
+// HEX Color Extension
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default: (a, r, g, b) = (255, 0, 0, 0)
+        }
+        self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255, opacity: Double(a)/255)
+    }
+}
+
+// MARK: - ContentView (First Page)
+struct ContentView: View {
+    @State private var showLogin = false
+    var body: some View {
+        VStack(spacing:10){
+            if let _ = UIImage(named: "icon") {
+                Image("icon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
+                    .clipShape(Circle())
+                    .shadow(color: .black, radius: 10, x: 5, y: 5)
+            }
+            Text("Welcome")
+                .font(.system(size:36))
+            Text("")
+            Text("to Türkiye's first agricultural application for farmers and Anatolian people.")
+                .font(.system(size:16))
+                .multilineTextAlignment(.center)
+            Text("")
+            Text("“The foundation of the national economy is agriculture. If the vast majority of our nation were not farmers, we would not be on Earth today.”")
+            Text("– M. K. Atatürk")
+                .font(.system(size:12))
+                .multilineTextAlignment(.center)
+                .padding()
+            
+            Button(action: { showLogin = true }) {
+                Text("Get Started!")
+                    .padding(20)
+                    .background(Color(hex: "#4CAF50"))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .sheet(isPresented: $showLogin) {
+                KayıtGirişView()
+            }
+        }
+        .padding()
+    }
+}
+
+// MARK: - Rounded Header
+struct RoundedHeader: View {
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color(hex: "0f321e")
+                .clipShape(RoundedCorner(radius: 28))
+                .edgesIgnoringSafeArea(.top)
+            
+            VStack {
+                Image("icon").resizable().frame(width: 200, height:200)
+            }
+            .padding(.bottom, 24)
+        }
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = 20
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRoundedRect(in: rect, cornerSize: CGSize(width: radius, height: radius))
+        return path
+    }
+}
+
+// Button Styles
+struct FillButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .padding()
+            .background(Color(Color(hex: "#EBAB3B")))
+            .foregroundColor(.white)
+            .cornerRadius(22)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+    }
+}
+
+struct OutlineButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .padding()
+            .overlay(
+                RoundedRectangle(cornerRadius:22).stroke(Color.green, lineWidth: 2)
+            )
+            .foregroundColor(Color.green)
+            .background(Color.clear)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+    }
+}
+
+// Login/Signup
+struct KayıtGirişView: View {
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                RoundedHeader().frame(height: 350)
+                Spacer()
+                NavigationLink(destination: SignUpView()) {
+                    Text("Sign In")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OutlineButtonStyle())
+                NavigationLink(destination: LoginView()) {
+                    Text("Log In")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OutlineButtonStyle())
+            }
+            .padding()
+            .navigationBarHidden(true)
+            .background(Color(hex: "0f321e"))
+        }
+    }
+}
+
+// Sign Up View
+struct SignUpView: View {
+    @State private var name = ""
+    @State private var email = ""
+    @State private var password = ""
+    @State private var showAlert = false
+    @Environment(\.presentationMode) var presentation
+    
+    var body: some View {
+        VStack(spacing:20) {
+            RoundedHeader().frame(height: 200)
+            
+            VStack(spacing: 20) {
+                TextField("User Name", text: $name)
+                TextField("E-Mail Address", text: $email)
+                    .keyboardType(.emailAddress)
+                SecureField("Password", text: $password)
+                SecureField("Repeat Password", text: $password)
+            }
+            .textFieldStyle(RoundedBorderTextFieldStyle())
+            .padding(.horizontal, 28)
+            
+            Button(action: signUp) {
+                Text("Sign In").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(FillButtonStyle())
+            .padding(.horizontal, 28)
+            Spacer()
+        }
+        .navigationBarTitle("Sign In", displayMode: .inline)
+        .alert(isPresented: $showAlert) {
+            Alert(title: Text("Done"),
+                  message: Text("Signed in successfully! You can log in now."),
+                  dismissButton: .default(Text("OK!")) {
+                    presentation.wrappedValue.dismiss()
+                  })
+        }
+    }
+    
+    func signUp() {
+        guard !email.isEmpty, !password.isEmpty else {return}
+        UserDefaults.standard.set(email, forKey: "savedEmail")
+        UserDefaults.standard.set(password, forKey: "savedPassword")
+        UserDefaults.standard.set(name, forKey: "savedUsername")
+        showAlert = true
+    }
+}
+
+// Login View
+struct LoginView: View {
+    @State private var isLoggedIn = false
+    @State private var username = ""
+    @State private var password = ""
+
+    var body: some View {
+        VStack(spacing: 20) {
+            RoundedHeader()
+                .frame(height: 220)
+                .ignoresSafeArea(edges: .top)
+
+            VStack(spacing: 20) {
+                Text("Log In")
+                    .font(.largeTitle)
+
+                TextField("User Name", text: $username)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+
+                SecureField("Password", text: $password)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+
+                NavigationLink(destination: MainView(), isActive: $isLoggedIn) {
+                    Button("Log In") {
+                        if !username.isEmpty && !password.isEmpty {
+                            isLoggedIn = true
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(hex: "#EBAB3B"))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                }
+            }
+            Spacer()
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+// Main View
+struct MainView: View {
+    @State private var username = "User"
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 30) {
+                RoundedHeader()
+                    .frame(height: 220)
+                    .ignoresSafeArea(edges: .top)
+                Text("Welcome \(username)!")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color(hex: "#262525"))
+                
+                VStack(spacing: 20) {
+                    NavigationLink(destination: ChildView()) {
+                        Text("Children")
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                    
+                    NavigationLink(destination: FarmerView()) {
+                        Text("Farmers")
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                }
+                Spacer()
+            }
+            .padding()
+            .navigationBarHidden(true)
+            .onAppear {
+                username = UserDefaults.standard.string(forKey: "savedUsername") ?? "User"
+            }
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+// Farmer View
+struct FarmerView: View {
+    @State private var username = "User"
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("Welcome \(username)!")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                
+                if let _ = UIImage(named: "farmers view") {
+                    Image("farmers view")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 355, height: 175)
+                        .clipped()
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
+                }
+                
+                Text("Modern Irrigation Techniques")
+                    .font(.headline)
+                Text("Increasing populations and water demands necessitate efficient irrigation methods in agriculture. Drip, sprinkler, micro, and smart systems save up to 70% of water and increase yields by up to 40%. Modern irrigation both protects the environment and offers farmers an economic advantage.")
+                    .font(.subheadline)
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal)
+                
+                NavigationLink(destination: SulamaTek()) {
+                    Text("about 5 minutes of reading")
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "#591212"))
+                }
+                
+                Divider().padding(.vertical)
+                
+                Text("Quick Access Tools")
+                    .font(.headline)
+                
+                VStack(spacing: 15) {
+                    NavigationLink(destination: Soil()) {
+                        HStack {
+                            Image("soil")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 45 , height: 45)
+                            Text("Soil Humidity")
+                                .foregroundColor(.black)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
+                        .overlay(RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "#2196F3"), lineWidth: 2)
+                        )
+                    }
+                    
+                    NavigationLink(destination: Weather()) {
+                        HStack {
+                            Image("weather")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 45 , height: 45)
+                            Text("Weather")
+                                .foregroundColor(.black)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
+                        .overlay(RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "#2196F3"), lineWidth: 2)
+                        )
+                    }
+                    
+                    NavigationLink(destination: Water()) {
+                        HStack {
+                            Image("water")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 45 , height: 45)
+                            Text("Water Levels")
+                                .foregroundColor(.black)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
+                        .overlay(RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "#2196F3"), lineWidth: 2)
+                        )
+                    }
+                    
+                    NavigationLink(destination: SQuality()) {
+                        HStack {
+                            Image("SQuality")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 45 , height: 45)
+                            Text("Soil Quality")
+                                .foregroundColor(.black)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
+                        .overlay(RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "#2196F3"), lineWidth: 2)
+                        )
+                    }
+                    Text("Today's Insights")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    VStack(spacing: 15) {
+                        NavigationLink(destination: RecentHumidity()) {
+                            HStack {
+                                Image("soil")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width:45 , height: 45)
+                                Text("Recent Soil Humidity")
+                                    .foregroundColor(.black)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
+                        }
+                        NavigationLink(destination: RainfallForecast()) {
+                            HStack {
+                                Image("rainfall")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width:45 , height:45)
+                                Text("Rainfall Forecast")
+                                    .foregroundColor(.black)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .onAppear {
+                    username = UserDefaults.standard.string(forKey: "savedUsername") ?? "User"
+                }
+            }
+            .navigationTitle("Farmer View")
+        }
+    }
+}
+
+// Other Pages
+struct RainfallForecast: View {
+    var body: some View {
+            
+    }
+}
+struct RecentHumidity: View {
+    var body: some View {
+            
+    }
+}
+struct SQuality: View {
+    var body: some View {
+        Text("Toprak verimi metni koyulacak")
+            .padding()
+    }
+}
+    
+struct Water: View {
+    var body: some View {
+        Text("Su seviyeleri metni koyulacak")
+            .padding()
+    }
+}
+    
+struct Weather: View {
+    var body: some View {
+        Text("Hava durumu API koyulacak")
+            .padding()
+    }
+}
+    
+struct SulamaTek: View {
+    var body: some View {
+        ScrollView {
+            Text("MODERN IRRIGATION TECHNIQUES") .padding()
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            Text("The world's population and are increasing every day as the population increases, the need for products is increasing.Agricultural products in the importance of Agriculture for the supply of every part of the world are very great.Agriculture increases the need for agricultural irrigation by growing.Water usage in our article as we mentioned, the biggest role agriculture plays in the consumption of natural water resources. All these combined, the value of modern irrigation techniques with each passing day in our lives is increasing.The useof traditional irrigation as well as more convenient and economical because it is growing every day with this system the farmers of energy, water and labor costs.")
+            Text(" ")
+            Text("Modern irrigation systems, or techniques, to ensure the efficient operation of water in agriculture, in order to avoid wastage and increase product yield improved techniques.Traditional methods are inadequate in cases where irrigation modern irrigation systems water to the plant roots to be used more effectively by providing direct access allows.Modern irrigation systems water stress the importance of living in our country as it is in places is very important.")
+            Text(" ")
+            Text("With modern irrigation systems:")
+            Text("o In the years to 20-25 billion m3 water savings can be made.")
+            Text("o In agriculture yield of 30-40% may increase.")
+            Text("o Less fertilizer/drug consumption → environmental pollution is reduced.")
+            Text(" Modern irrigation techniques: Dripirrigation,sprinkler irrigation, Underground (both room), drip irrigation, micro-sprinkler, intelligent and Automated irrigation systems")
+            Text("Come on, let us examine under 5 main headings of this system.")
+            Text("")
+            Text("Drip irrigation system,low water pressure in pipes and drippers Te this technique with a slow and controlled manner to the roots of the plant is given. Especially in the Aegean, Mediterranean and southeastern Anatolia regions, are widely used.")
+            Text("")
+            Text("Benefits %40-60 much water savingsit provides.Fertilizer directly to the root and medicine, since it significantly reduces loss of nutrients. Soil erosion and runoff is at a minimal level. To a large extent prevented the development of weeds.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Disadvantages: the initial investment cost is quite high. The tip of clogging of drippers is a common problem.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Sprinkler irrigation system, with the help of pressurized water pipes or sprinklers just like rain to the fields is returned.This method of Central Anatolia and Thrace are used widely.")
+            Text("")
+            Text("Advantages of different types of soil and plant can be made use of. .Water, homogenously distributed product development for more regular .Traditional irrigation compared to 30-50% water savings.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Disadvantages:Wind and evaporation often due to water loss can be experienced.Installation and energy cost is quite high.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Micro-sprinkler systems, these systems are low pressure water sprinkler heads, nozzles with small plant to the environment is given.Mediterranean citrus production in the Aegean and is more desirable.")
+            Text("")
+            Text("Advantages:provides homogeneous irrigation fruit trees and vineyards. Protection against the risk of frost during the flowering periodcan provide.Fertilizer and spraying can be integrated with.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Disadvantages:evaporation losses in drip irrigation more than classic.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Underground (both room), drip irrigation,drip irrigation pipes placed under the ground to prevent loss and evaporation provides water directly to the plant roots for a given yield and waste both prevents.The use is currently limited, although cotton and corn in the fields began to appear.")
+            Text("")
+            Text("Advantages:Evaporation loss is almost zero.%60-70 percent water savings it provides.Foreign output weed is minimal.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text(" Disadvantages:theInitial investment cost is very high.The pipes and is difficult to maintain control.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Intelligent and automated irrigation systems water of their needs in the most efficient and effective manner to meet you, Moisture sensors, weather stations, and IoT (Internet of things), such as advanced technologies faydalananir. Some greenhouses in Antalya and the Aegean agricultural cooperatives are being used.")
+            Text("")
+            Text(" Advantages:the plant needs as much water as is given → 50% water and energy saving.Remote control, there is the possibility (via mobile apps).More irrigation-induced salinity and erosion is prevented.") .foregroundColor(Color(Color(hex: "#999A9A")))
+            Text("")
+            Text("Disadvantages:High capital investment and technology requires.") .foregroundColor(Color(Color(hex: "#999A9A"))) }
+        .padding(12)
+    }
+}
+    
+struct Soil: View {
+    var body: some View {
+        Text("Toprak nemi metni koyulacak")
+            .padding()
+    }
+}
+    
+// Kids View
+struct ChildView: View {
+    var body: some View {
+        VStack {
+            Text("Agriculture Game For Kids")
+            Text("COMING SOON!")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(Color(hex: "#262525"))
+        }
+        .padding()
+    }
+}
+
